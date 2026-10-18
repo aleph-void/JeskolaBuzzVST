@@ -30,7 +30,7 @@ jobs:
 
       - name: Build and run tests
         run: |
-          cmake --build build32 --config Release --target BuzzBridgeTests
+          cmake --build build32 --config Release --target BuzzBridgeTests BuzzProcessorTests
           ctest --test-dir build32 -C Release --output-on-failure
 
       - name: Build machine test suite
