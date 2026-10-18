@@ -106,7 +106,7 @@ if(BUZZVST_64BIT)
 endif()
 
 if(SMTG_WIN)
-    target_link_libraries(BuzzBridge PRIVATE kernel32 comdlg32 user32 gdi32 shell32 ole32)
+    target_link_libraries(BuzzBridge PRIVATE kernel32 advapi32 comdlg32 user32 gdi32 shell32 ole32)
 endif()
 
 if(MINGW)

@@ -2,7 +2,9 @@
 ; Installs two separate bundles:
 ;   - 64-bit bundle → Program Files\Common Files\VST3\BuzzBridge.vst3
 ;   - 32-bit bundle → Program Files (x86)\Common Files\VST3\BuzzBridge.vst3
-; and extracts the machine database to %USERPROFILE%\Buzz\Gear.
+; and extracts the machine database to a user-chosen Gear folder (default
+; %USERPROFILE%\Buzz\Gear, but any drive works). The chosen folder is
+; recorded at HKCU\Software\BuzzBridge\GearDir so the plugin finds it.
 ;
 ; Build with: iscc /DMyAppVersion=v1.0.0 BuzzBridge.iss
 ; Expects the assembled bundle in ../dist/BuzzBridge.vst3/
@@ -61,7 +63,7 @@ Name: "custom"; Description: "Custom installation"; Flags: iscustom
 
 [Components]
 Name: "plugin"; Description: "BuzzBridge VST3 Plugin"; Types: full compact custom; Flags: fixed
-Name: "machines"; Description: "Buzz Machine Database (726 machines, extracts to %USERPROFILE%\Buzz\Gear)"; Types: full
+Name: "machines"; Description: "Buzz Machine Database (726 machines, extracts to a folder you choose)"; Types: full
 
 [Files]
 ; -----------------------------------------------------------------------
@@ -92,6 +94,11 @@ Source: "..\dist\BuzzBridge.vst3\PlugIn.ico"; DestDir: "{commoncf32}\VST3\BuzzBr
 ; Machine database zip — extracted in [Code] section
 Source: "..\data\mdb_machines.zip"; DestDir: "{tmp}"; Components: machines; Flags: deleteafterinstall skipifsourcedoesntexist
 
+[Registry]
+; Tells the plugin where the machine database was extracted. The plugin
+; also updates this value whenever a Gear folder is picked in its UI.
+Root: HKCU; Subkey: "Software\BuzzBridge"; ValueType: string; ValueName: "GearDir"; ValueData: "{code:GetGearDir}"; Components: machines; Flags: uninsdeletevalue uninsdeletekeyifempty
+
 [Icons]
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 
@@ -108,6 +115,37 @@ Type: filesandordirs; Name: "{commoncf64}\VST3\BuzzBridge.vst3\Contents\x86-win"
 Type: filesandordirs; Name: "{commoncf32}\VST3\BuzzBridge.vst3\Contents\x86_64-win"
 
 [Code]
+var
+  GearDirPage: TInputDirWizardPage;
+
+procedure InitializeWizard();
+var
+  DefaultDir: String;
+begin
+  GearDirPage := CreateInputDirPage(wpSelectComponents,
+    'Buzz Machine Database Location',
+    'Where should the Buzz machine database be extracted?',
+    'The 726 bundled Buzz machines will be extracted to the following folder. ' +
+    'You can pick a folder on any drive. To continue, click Next.',
+    False, '');
+  GearDirPage.Add('');
+
+  { Prefer a previously chosen folder (installer or plugin UI) on upgrade }
+  if not RegQueryStringValue(HKCU, 'Software\BuzzBridge', 'GearDir', DefaultDir) then
+    DefaultDir := ExpandConstant('{%USERPROFILE}\Buzz\Gear');
+  GearDirPage.Values[0] := DefaultDir;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := (PageID = GearDirPage.ID) and not WizardIsComponentSelected('machines');
+end;
+
+function GetGearDir(Param: String): String;
+begin
+  Result := RemoveBackslashUnlessRoot(GearDirPage.Values[0]);
+end;
+
 procedure ExtractMachineDatabase();
 var
   ZipPath: String;
@@ -117,7 +155,7 @@ var
   DestFolder: Variant;
 begin
   ZipPath := ExpandConstant('{tmp}\mdb_machines.zip');
-  DestDir := ExpandConstant('{%USERPROFILE}\Buzz\Gear');
+  DestDir := GetGearDir('');
 
   if not FileExists(ZipPath) then
     Exit;

@@ -5,6 +5,7 @@
 #include "../buzz/BuzzPresetLoader.h"
 #include "../common/SEHGuard.h"
 #include "../common/PatchMessageBoxes.h"
+#include "../common/GearDirSetting.h"
 
 #include "pluginterfaces/base/ibstream.h"
 #include "pluginterfaces/base/ustring.h"
@@ -105,10 +106,12 @@ static bool IsDir(const std::string& path)
 //
 // Search order:
 //   1. $BUZZVST_GEAR_DIR (explicit override — works on Windows and WINE)
-//   2. %ProgramFiles(x86)%\Jeskola Buzz\Gear  (Jeskola installer default)
-//   3. %ProgramFiles%\Jeskola Buzz\Gear
-//   4. %USERPROFILE%\Buzz\Gear                (legacy/portable install)
-//   5. %USERPROFILE%\Jeskola Buzz\Gear
+//   2. HKCU\Software\BuzzBridge\GearDir   (installer choice / last folder
+//      picked in the UI — may be on any drive)
+//   3. %ProgramFiles(x86)%\Jeskola Buzz\Gear  (Jeskola installer default)
+//   4. %ProgramFiles%\Jeskola Buzz\Gear
+//   5. %USERPROFILE%\Buzz\Gear                (legacy/portable install)
+//   6. %USERPROFILE%\Jeskola Buzz\Gear
 //
 // Under WINE, %ProgramFiles(x86)% and %USERPROFILE% resolve via the WINE
 // prefix, so a WINE-installed Jeskola Buzz is found automatically. Linux
@@ -118,6 +121,9 @@ static std::string detectDefaultGearDir()
 {
 	std::string envDir = GetEnvStr("BUZZVST_GEAR_DIR");
 	if (IsDir(envDir)) return envDir;
+
+	std::string savedDir = ReadSavedGearDir();
+	if (IsDir(savedDir)) return savedDir;
 
 	const char* pfVars[] = { "ProgramFiles(x86)", "ProgramFiles" };
 	for (const char* v : pfVars) {
@@ -219,7 +225,8 @@ tresult PLUGIN_API BuzzController::initialize(FUnknown* context)
 	}
 
 	// Auto-detect default gear directory if none is set.
-	// The installer places machines in %USERPROFILE%\Buzz\Gear.
+	// The installer places machines in a user-chosen folder (default
+	// %USERPROFILE%\Buzz\Gear) and records it in the registry.
 	// Run on a background thread to avoid blocking the DAW during init.
 	if (gearDirPath.empty()) {
 		std::string defaultGear = detectDefaultGearDir();
@@ -365,6 +372,10 @@ IPlugView* PLUGIN_API BuzzController::createView(const char* name)
 
 void BuzzController::onGearDirSelected(const std::string& path)
 {
+	// Remember the choice so new instances default to it instead of the
+	// C:-rooted auto-detect locations.
+	WriteSavedGearDir(path);
+
 	scanGearDirectory(path);
 
 	// Update the view with the scan results

@@ -1,6 +1,7 @@
 #include "TestFramework.h"
 #include "TestHelpers.h"
 #include "../src/vst3/GearScanner.h"
+#include "../src/common/GearDirSetting.h"
 
 using namespace BuzzVst;
 
@@ -226,4 +227,30 @@ TEST(SharedGearScan, CachedResultReusedForSameDir) {
 	ASSERT_EQ((int)second.size(), (int)first.size());
 
 	RemoveDirectoryA(dir.c_str());
+}
+
+// ===== Remembered Gear directory (HKCU\Software\BuzzBridge\GearDir) =====
+
+TEST(GearDirSetting, RoundTripsNonCDrivePath) {
+	// Preserve whatever the user/installer stored so the test is non-destructive
+	std::string original = ReadSavedGearDir();
+
+	WriteSavedGearDir("D:\\Music\\Buzz\\Gear");
+	ASSERT_EQ(ReadSavedGearDir(), std::string("D:\\Music\\Buzz\\Gear"));
+
+	if (!original.empty()) {
+		WriteSavedGearDir(original);
+	} else {
+		HKEY hKey = nullptr;
+		if (RegOpenKeyExA(HKEY_CURRENT_USER, kGearDirRegKey, 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
+			RegDeleteValueA(hKey, kGearDirRegValue);
+			RegCloseKey(hKey);
+		}
+	}
+}
+
+TEST(GearDirSetting, WriteEmptyIsIgnored) {
+	std::string before = ReadSavedGearDir();
+	WriteSavedGearDir("");
+	ASSERT_EQ(ReadSavedGearDir(), before);
 }

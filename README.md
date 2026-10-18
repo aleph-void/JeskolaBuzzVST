@@ -247,13 +247,14 @@ After the installer writes the rc block, open a new terminal (or `source` the rc
 On startup, BuzzBridge auto-detects a Buzz Gear directory by checking the following locations in order:
 
 1. `$BUZZVST_GEAR_DIR` (explicit override — any Windows or WINE-mapped path)
-2. `%ProgramFiles(x86)%\Jeskola Buzz\Gear` (Jeskola installer default)
-3. `%ProgramFiles%\Jeskola Buzz\Gear`
-4. `%USERPROFILE%\Buzz\Gear` (legacy/portable install)
-5. `%USERPROFILE%\Jeskola Buzz\Gear`
-6. `Z:\home\$USER\Buzz\Gear` (WINE fallback — matches the Linux `install.sh` default)
+2. `HKCU\Software\BuzzBridge\GearDir` (the folder chosen in the Windows installer, or the last Gear folder picked in the plugin UI — any drive, e.g. `D:\Buzz\Gear`)
+3. `%ProgramFiles(x86)%\Jeskola Buzz\Gear` (Jeskola installer default)
+4. `%ProgramFiles%\Jeskola Buzz\Gear`
+5. `%USERPROFILE%\Buzz\Gear` (legacy/portable install)
+6. `%USERPROFILE%\Jeskola Buzz\Gear`
+7. `Z:\home\$USER\Buzz\Gear` (WINE fallback — matches the Linux `install.sh` default)
 
-Under WINE, `%ProgramFiles(x86)%` and `%USERPROFILE%` resolve through the WINE prefix. If you install Jeskola Buzz via its own installer into WINE, paths #2 and #4 both work with no extra configuration. If your Buzz machines live somewhere else (e.g. on your Linux home directory, accessed via WINE's `Z:\` drive mapping), set the env var before launching your DAW:
+Under WINE, `%ProgramFiles(x86)%` and `%USERPROFILE%` resolve through the WINE prefix. If you install Jeskola Buzz via its own installer into WINE, paths #3 and #5 both work with no extra configuration. If your Buzz machines live somewhere else (e.g. on your Linux home directory, accessed via WINE's `Z:\` drive mapping), set the env var before launching your DAW:
 
 ```bash
 export BUZZVST_GEAR_DIR='Z:\home\alice\buzz-machines'
