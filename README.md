@@ -2,7 +2,7 @@
 
 # BuzzBridge VST3
 
-[![CI](https://github.com/nstarke/JeskolaBuzzVST/actions/workflows/ci.yml/badge.svg)](https://github.com/nstarke/JeskolaBuzzVST/actions/workflows/ci.yml)
+[![CI](https://github.com/aleph-void/JeskolaBuzzVST/actions/workflows/ci.yml/badge.svg)](https://github.com/aleph-void/JeskolaBuzzVST/actions/workflows/ci.yml)
 
 ![images/image.png](images/image.png)
 
@@ -26,7 +26,7 @@ Both 32-bit and 64-bit DAWs are supported. All Buzz machine parameters are mappe
 ## Build
 
 ```bash
-git clone --recursive https://github.com/nstarke/JeskolaBuzzVST.git
+git clone --recursive https://github.com/aleph-void/JeskolaBuzzVST.git
 cd JeskolaBuzzVST
 ```
 
@@ -108,7 +108,7 @@ The `/DMyAppVersion=` flag sets the version shown in the installer and the outpu
 
 ### From installer (recommended)
 
-Download `BuzzBridge-Setup-vX.Y.Z.exe` from the [Releases](https://github.com/nstarke/JeskolaBuzzVST/releases) page and run it. The installer places the VST3 bundle in `C:\Program Files\Common Files\VST3\BuzzBridge.vst3\` and provides an uninstaller via Windows Add/Remove Programs.
+Download `BuzzBridge-Setup-vX.Y.Z.exe` from the [Releases](https://github.com/aleph-void/JeskolaBuzzVST/releases) page and run it. The installer places the VST3 bundle in `C:\Program Files\Common Files\VST3\BuzzBridge.vst3\` and provides an uninstaller via Windows Add/Remove Programs.
 
 ### Manual installation
 
@@ -178,7 +178,7 @@ Or copy `dist-wine/BuzzBridge.vst3` into any directory `yabridgectl` is already 
 
 ### Installing from a release tarball
 
-Download `BuzzBridge-Linux-vX.Y.Z.tar.gz` from the [Releases](https://github.com/nstarke/JeskolaBuzzVST/releases) page, extract, and run the bundled installer:
+Download `BuzzBridge-Linux-vX.Y.Z.tar.gz` from the [Releases](https://github.com/aleph-void/JeskolaBuzzVST/releases) page, extract, and run the bundled installer:
 
 ```bash
 tar xf BuzzBridge-Linux-vX.Y.Z.tar.gz

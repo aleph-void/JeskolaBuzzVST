@@ -589,7 +589,7 @@ if [[ "${install_machines}" -eq 1 ]]; then
         echo
         echo "ERROR: This tarball was not built from a tagged release, so the" >&2
         echo "machine database URL is unavailable. Download mdb_machines.zip" >&2
-        echo "manually from https://github.com/nstarke/JeskolaBuzzVST/releases" >&2
+        echo "manually from https://github.com/aleph-void/JeskolaBuzzVST/releases" >&2
         echo "and extract it to ${GEAR_DIR}." >&2
     else
         echo

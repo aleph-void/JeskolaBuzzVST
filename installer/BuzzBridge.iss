@@ -26,7 +26,7 @@
 
 #define MyAppName "BuzzBridge VST3"
 #define MyAppPublisher "BuzzBridge Contributors"
-#define MyAppURL "https://github.com/nstarke/JeskolaBuzzVST"
+#define MyAppURL "https://github.com/aleph-void/JeskolaBuzzVST"
 
 [Setup]
 AppId={{7A4E534B-4F4C-4142-555A-5A47454E3031}
