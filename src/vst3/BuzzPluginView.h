@@ -44,7 +44,6 @@ public:
 	std::function<void(int delta)> onTrackCountChanged; // delta: +1 or -1
 	std::function<void()> onCheckScanResults; // controller polls scan results
 	std::function<void()> onDeferredParamUpdate; // called on UI thread after machine load
-	std::function<bool()> onPollMachineLoad;    // returns true when load complete
 	std::function<void(Steinberg::Vst::ParamID id)> onParamBeginEdit;
 	std::function<void(Steinberg::Vst::ParamID id, double value)> onParamChanged;
 	std::function<void(Steinberg::Vst::ParamID id)> onParamEndEdit;

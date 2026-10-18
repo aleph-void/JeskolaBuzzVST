@@ -73,7 +73,7 @@ protected:
 	void updateMasterInfo(ProcessContext* ctx);
 
 	// Load or reload the Buzz machine DLL
-	bool loadBuzzMachine(const std::string& path);
+	bool loadBuzzMachine(const std::string& path, std::string* error = nullptr);
 
 	// Send wave slot names to the controller for GUI display
 	void sendWaveSlotsToController();
@@ -125,13 +125,6 @@ protected:
 	// Wave paths loaded via bridge (for state persistence in 64-bit mode)
 	struct WavePathEntry { int slotIndex; std::string filePath; };
 	std::vector<WavePathEntry> loadedWavePaths;
-
-	// Deferred machine load: notify() sets the path, process() does the actual load.
-	// This avoids race conditions between the UI thread (notify) and audio thread (process).
-	std::string pendingDllPath;
-	bool hasPendingLoad = false;
-	bool pendingMachineLoaded = false;  // set after successful deferred load
-	bool pendingLoadFailed = false;     // set after failed deferred load
 
 	// Machine info (populated from loader in 32-bit, or bridge in 64-bit)
 	int machineType = 0;
@@ -195,7 +188,6 @@ protected:
 	// Whether to actually resample.  Both generators and effects run at 44100
 	// internally — most Buzz machines have hardcoded DSP for that rate.
 	bool shouldResample() const { return needsResampling; }
-	double resampleFracAccum = 0.0;  // fractional sample accumulator
 
 	// Resamplers (per-channel): output upsamplers + input downsamplers (effects)
 	BuzzResampler resamplerOutL, resamplerOutR;
