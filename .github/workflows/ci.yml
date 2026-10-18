@@ -27,7 +27,7 @@ jobs:
         run: cmake --build build32 --config Release --target BuzzBridgeHost32
 
       - name: Build tests
-        run: cmake --build build32 --config Release --target BuzzBridgeTests
+        run: cmake --build build32 --config Release --target BuzzBridgeTests BuzzProcessorTests
 
       - name: Run tests
         run: ctest --test-dir build32 -C Release --output-on-failure
@@ -37,6 +37,11 @@ jobs:
 
       - name: Build 64-bit plugin
         run: cmake --build build64 --config Release --target BuzzBridge
+
+      - name: Run 64-bit processor regressions
+        run: |
+          cmake --build build64 --config Release --target BuzzProcessorTests
+          ctest --test-dir build64 -C Release --output-on-failure
 
       - name: Assemble VST3 bundle
         run: |
@@ -111,8 +116,9 @@ jobs:
           # Reuse the build-wine tree the cross-build step configured; just add
           # the test target and run the statically-linked exe under WINE. xvfb
           # gives WINE a headless display for first-run prefix init.
-          cmake --build build-wine --target BuzzBridgeTests
+          cmake --build build-wine --target BuzzBridgeTests BuzzProcessorTests
           xvfb-run -a wine build-wine/bin/BuzzBridgeTests.exe
+          xvfb-run -a wine build-wine/bin/BuzzProcessorTests.exe
 
       - name: Package Linux tarball
         run: ./scripts/package-linux.sh "ci-${{ github.sha }}"

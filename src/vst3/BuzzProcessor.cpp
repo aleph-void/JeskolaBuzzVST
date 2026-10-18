@@ -77,7 +77,7 @@ tresult PLUGIN_API BuzzProcessor::setupProcessing(ProcessSetup& newSetup)
 	// Determine if resampling is needed (host rate differs from Buzz's 44100)
 	updateResamplers();
 
-	// Only generators get told 44100; effects get the real host rate
+	// Both generators and effects run at the machine rate.
 	double machineRate = shouldResample() ? kBuzzMachineRate : newSetup.sampleRate;
 	if (machineReady) {
 #ifdef BUZZVST_64BIT
@@ -103,23 +103,12 @@ void BuzzProcessor::updateResamplers()
 		// Input: downsample host rate -> machine rate (44100) - used by effects
 		resamplerInL.init(processSetup.sampleRate, kBuzzMachineRate);
 		resamplerInR.init(processSetup.sampleRate, kBuzzMachineRate);
-		resampleFracAccum = 0.0;
 	}
 }
 
 int BuzzProcessor::computeMachineSamples(int hostSamples)
 {
-	double exact = hostSamples * (kBuzzMachineRate / processSetup.sampleRate) + resampleFracAccum;
-	// Always round UP and add 1 safety margin.  The resampler's phase tracking
-	// is independent of this accumulator — if we provide too few machine samples,
-	// the resampler inserts zeros for the missing input, creating a periodic
-	// click at the block rate that downstream effects amplify into an audible tone.
-	// The +1 margin ensures the resampler never runs out.  The fractional
-	// accumulator goes slightly negative, self-correcting on subsequent blocks.
-	int result = (int)ceil(exact) + 1;
-	if (result < 1) result = 1;
-	resampleFracAccum = exact - result;
-	return result;
+	return resamplerOutL.inputSamplesRequired(hostSamples);
 }
 
 tresult PLUGIN_API BuzzProcessor::canProcessSampleSize(int32 symbolicSampleSize)
@@ -159,22 +148,6 @@ tresult PLUGIN_API BuzzProcessor::process(ProcessData& data)
 		return kResultOk;
 	}
 
-	// Handle deferred machine load (from notify on UI thread)
-	// Must happen on the audio thread since the bridge pipe isn't thread-safe.
-	if (hasPendingLoad) {
-		hasPendingLoad = false;
-		dllPath = pendingDllPath;
-		pendingDllPath.clear();
-		OutputDebugStringA("[BuzzBridge] Processor: executing deferred machine load\n");
-		if (loadBuzzMachine(dllPath)) {
-			OutputDebugStringA("[BuzzBridge] Processor: deferred load OK\n");
-			// Cannot call sendMessage from audio thread (deadlocks).
-			// Set flag for output parameter to signal the controller.
-			pendingMachineLoaded = true;
-		} else {
-			OutputDebugStringA("[BuzzBridge] Processor: deferred load FAILED\n");
-		}
-	}
 #endif
 
 	// Process parameter changes
@@ -247,9 +220,10 @@ tresult PLUGIN_API BuzzProcessor::process(ProcessData& data)
 		machineSamples = computeMachineSamples(data.numSamples);
 
 		// Ensure intermediate buffers are large enough
-		if ((int)resampleBufOutL.size() < machineSamples) {
-			resampleBufOutL.resize(machineSamples);
-			resampleBufOutR.resize(machineSamples);
+		int bufferSamples = std::max(1, machineSamples);
+		if ((int)resampleBufOutL.size() < bufferSamples) {
+			resampleBufOutL.resize(bufferSamples);
+			resampleBufOutR.resize(bufferSamples);
 		}
 		memset(resampleBufOutL.data(), 0, machineSamples * sizeof(float));
 		memset(resampleBufOutR.data(), 0, machineSamples * sizeof(float));
@@ -258,15 +232,15 @@ tresult PLUGIN_API BuzzProcessor::process(ProcessData& data)
 
 		// Downsample host inputs for effects
 		if (hostInputs && numInputChannels > 0 && hostInputs[0]) {
-			if ((int)resampleBufInL.size() < machineSamples) {
-				resampleBufInL.resize(machineSamples);
-				resampleBufInR.resize(machineSamples);
+			if ((int)resampleBufInL.size() < bufferSamples) {
+				resampleBufInL.resize(bufferSamples);
+				resampleBufInR.resize(bufferSamples);
 			}
 			resInPtrs[0] = resampleBufInL.data();
-			resamplerInL.process(hostInputs[0], data.numSamples, resInPtrs[0], machineSamples);
+			resamplerInL.processBuffered(hostInputs[0], data.numSamples, resInPtrs[0], machineSamples);
 			if (numInputChannels >= 2 && hostInputs[1]) {
 				resInPtrs[1] = resampleBufInR.data();
-				resamplerInR.process(hostInputs[1], data.numSamples, resInPtrs[1], machineSamples);
+				resamplerInR.processBuffered(hostInputs[1], data.numSamples, resInPtrs[1], machineSamples);
 			} else {
 				memcpy(resampleBufInR.data(), resampleBufInL.data(), machineSamples * sizeof(float));
 				resInPtrs[1] = resampleBufInR.data();
@@ -985,7 +959,7 @@ bool BuzzProcessor::ensureBridgeRunning()
 	return bridge.Start(bridgeHostPath);
 }
 
-bool BuzzProcessor::loadBuzzMachine(const std::string& path)
+bool BuzzProcessor::loadBuzzMachine(const std::string& path, std::string* error)
 {
 	machineReady = false;
 	if (path.empty()) return false;
@@ -1029,15 +1003,10 @@ bool BuzzProcessor::loadBuzzMachine(const std::string& path)
 		snprintf(dbg, sizeof(dbg), "[BuzzBridge] loadBuzzMachine: machine type %d not accepted\n", bmi.type);
 		OutputDebugStringA(dbg);
 
-		// Send typed error to controller
-		if (auto msg = owned(allocateMessage())) {
-			msg->setMessageID("BuzzMachineLoadFailed");
-			msg->getAttributes()->setBinary("Path", path.c_str(), (Steinberg::uint32)path.size());
-			const char* reason = (bmi.type == MT_EFFECT)
+		if (error) {
+			*error = (bmi.type == MT_EFFECT)
 				? "This is an Effect machine. Load it in the BuzzBridge Effect plugin."
 				: "This is a Generator machine. Load it in the BuzzBridge Generator plugin.";
-			msg->getAttributes()->setBinary("Reason", reason, (Steinberg::uint32)strlen(reason));
-			sendMessage(msg);
 		}
 
 		bridge.Unload();
@@ -1182,7 +1151,7 @@ bool BuzzProcessor::loadBuzzMachine(const std::string& path)
 
 #else // 32-bit direct mode
 
-bool BuzzProcessor::loadBuzzMachine(const std::string& path)
+bool BuzzProcessor::loadBuzzMachine(const std::string& path, std::string* error)
 {
 	machineReady = false;
 
@@ -1731,8 +1700,8 @@ tresult PLUGIN_API BuzzProcessor::notify(IMessage* message)
 
 #ifdef BUZZVST_64BIT
 	// Hold the bridge mutex for the entire notify dispatch. Several message
-	// handlers (BuzzLoadWaves, BuzzSetNumTracks, BuzzPollMachineStatus via
-	// sendMachineLoadedToController, etc.) call bridge functions. Without
+	// handlers (BuzzDllPath, BuzzLoadWaves, BuzzSetNumTracks, etc.) call
+	// bridge functions. Without
 	// this lock they'd race the audio thread's process() which is also
 	// calling bridge.Work/Tick on the same pipe.
 	std::lock_guard<std::recursive_mutex> bridgeLock(bridgeMutex);
@@ -1817,21 +1786,18 @@ tresult PLUGIN_API BuzzProcessor::notify(IMessage* message)
 				OutputDebugStringA(dbg);
 			}
 			if (newPath != dllPath || !machineReady) {
-#ifdef BUZZVST_64BIT
-				// Defer to audio thread to avoid race conditions with process()
-				// (both use the same bridge pipe, which is not thread-safe)
-				pendingDllPath = newPath;
-				hasPendingLoad = true;
-				machineReady = false;
-				OutputDebugStringA("[BuzzBridge] Processor: deferred machine load\n");
-#else
+				// notify() holds bridgeMutex, so loading here is safe even while
+				// process() is running. It also works when the host suspends audio.
 				dllPath = newPath;
+#ifndef BUZZVST_64BIT
 				if (machineReady) {
 					loader.Unload();
 					machineReady = false;
 				}
+#endif
 				OutputDebugStringA("[BuzzBridge] Processor: loading machine...\n");
-				if (loadBuzzMachine(dllPath)) {
+				std::string error;
+				if (loadBuzzMachine(dllPath, &error)) {
 					OutputDebugStringA("[BuzzBridge] Processor: machine loaded OK\n");
 					sendMachineLoadedToController();
 				} else {
@@ -1840,21 +1806,15 @@ tresult PLUGIN_API BuzzProcessor::notify(IMessage* message)
 						msg->setMessageID("BuzzMachineLoadFailed");
 						msg->getAttributes()->setBinary("Path",
 							dllPath.c_str(), (Steinberg::uint32)dllPath.size());
+						if (!error.empty())
+							msg->getAttributes()->setBinary("Reason", error.data(), (Steinberg::uint32)error.size());
 						sendMessage(msg);
 					}
 				}
-#endif
+			} else {
+				// A repeated selection still needs a completion response.
+				sendMachineLoadedToController();
 			}
-		}
-		return kResultOk;
-	}
-
-	// Poll from controller: if deferred load completed, send machine info back
-	if (strcmp(message->getMessageID(), "BuzzPollMachineStatus") == 0) {
-		if (pendingMachineLoaded && machineReady) {
-			pendingMachineLoaded = false;
-			OutputDebugStringA("[BuzzBridge] Processor: poll triggered, sending BuzzMachineLoaded\n");
-			sendMachineLoadedToController();
 		}
 		return kResultOk;
 	}

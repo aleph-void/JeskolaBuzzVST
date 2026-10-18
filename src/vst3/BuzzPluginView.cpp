@@ -692,16 +692,6 @@ LRESULT CALLBACK BuzzPluginView::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPA
 				if (self->onDeferredParamUpdate) self->onDeferredParamUpdate();
 				return 0;
 			}
-			if (msg == WM_TIMER && wParam == 42 && self) {
-				// Poll timer: check if deferred machine load completed
-				if (self->onPollMachineLoad) {
-					bool done = self->onPollMachineLoad();
-					if (done) {
-						KillTimer(hWnd, 42);
-					}
-				}
-				return 0;
-			}
 			break;
 
 		case WM_VSCROLL:

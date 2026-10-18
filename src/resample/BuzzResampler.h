@@ -11,6 +11,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 namespace BuzzVst {
 
@@ -68,6 +69,7 @@ public:
 	void init(double srcRate, double dstRate) {
 		ratio_ = srcRate / dstRate;
 		phase_ = 0.0;
+		pendingInput_.clear();
 		memset(hist_, 0, sizeof(hist_));
 		active_ = true;
 
@@ -92,12 +94,38 @@ public:
 
 	void reset() {
 		phase_ = 0.0;
+		pendingInput_.clear();
 		memset(hist_, 0, sizeof(hist_));
 		if (antiAlias_) { aa1_.reset(); aa2_.reset(); }
 		if (antiImage_) { ai1_.reset(); ai2_.reset(); }
 	}
 
 	bool isActive() const { return active_; }
+
+	// Use the same phase progression as process(), including its initial
+	// history delay. Independent block rounding can drop or invent samples.
+	int inputSamplesRequired(int outputLen) const {
+		double phase = phase_;
+		int required = 0;
+		for (int o = 0; o < outputLen; ++o) {
+			while (phase >= 1.0) {
+				++required;
+				phase -= 1.0;
+			}
+			phase += ratio_;
+		}
+		return required;
+	}
+
+	// Accept an entire source block and retain its unused tail for the next
+	// call. This is needed for effect inputs, whose host and machine block
+	// boundaries generally do not coincide. Also accepts zero-output blocks.
+	void processBuffered(const float* input, int inputLen, float* output, int outputLen) {
+		if (inputLen > 0)
+			pendingInput_.insert(pendingInput_.end(), input, input + inputLen);
+		int consumed = process(pendingInput_.data(), (int)pendingInput_.size(), output, outputLen);
+		pendingInput_.erase(pendingInput_.begin(), pendingInput_.begin() + consumed);
+	}
 
 	// Produce exactly outputLen output samples from up to inputLen input samples.
 	// Returns the number of input samples consumed.  The internal phase state
@@ -139,6 +167,7 @@ public:
 private:
 	double ratio_  = 1.0;
 	double phase_  = 0.0;
+	std::vector<float> pendingInput_;
 	float  hist_[4] = {};
 	bool   active_    = false;
 	bool   antiAlias_ = false;   // downsampling: pre-interpolation lowpass
