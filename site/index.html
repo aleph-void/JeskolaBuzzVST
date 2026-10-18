@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuzzBridge VST3 — Aleph Void, LLC</title>
+  <meta name="description" content="BuzzBridge loads Jeskola Buzz machine DLLs as VST3 instruments and effects in any modern DAW, on Windows and Linux.">
+  <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+  <link rel="icon" type="image/png" href="/assets/logo.png" sizes="256x256">
+  <meta property="og:title" content="BuzzBridge VST3">
+  <meta property="og:description" content="Run Jeskola Buzz machines as VST3 instruments and effects in any DAW.">
+  <meta property="og:image" content="https://jeskola-buzz.alephvoid.com/assets/screenshot.png">
+  <meta property="og:url" content="https://jeskola-buzz.alephvoid.com/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #16161f;
+      --border: #1e1e2e;
+      --text-primary: #e4e4e7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #6d28d9;
+      --accent-light: #8b5cf6;
+      --accent-glow: rgba(139, 92, 246, 0.15);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+    }
+
+    code {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.1em 0.35em;
+    }
+
+    pre {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+      overflow-x: auto;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 1rem 0;
+    }
+
+    pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    a {
+      color: var(--accent-light);
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+      background: rgba(10, 10, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    nav .logo-mark {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    nav .logo-mark svg {
+      height: 56px;
+      width: 56px;
+      background-color: #fff;
+      border-radius: 8px;
+      border: 2px solid var(--accent);
+    }
+
+    nav .logo-mark span {
+      font-weight: 600;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 2rem;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--text-primary);
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      max-width: 760px;
+    }
+
+    .hero-logo {
+      width: 240px;
+      max-width: 100%;
+      height: auto;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+      border: 2px solid var(--accent);
+      image-rendering: pixelated;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.25rem, 5vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero h1 .accent {
+      color: var(--accent-light);
+    }
+
+    .hero p {
+      font-size: 1.125rem;
+      color: var(--text-secondary);
+      max-width: 580px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.75rem;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      border: 1px solid var(--accent);
+      transition: background 0.2s, transform 0.2s, border-color 0.2s;
+    }
+
+    .btn:hover {
+      background: var(--accent-light);
+      border-color: var(--accent-light);
+      transform: translateY(-1px);
+    }
+
+    .btn.secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border-color: var(--border);
+    }
+
+    .btn.secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .version-note {
+      margin-top: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Sections */
+    section {
+      padding: 5rem 2rem;
+    }
+
+    .section-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-light);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
+    }
+
+    .section-desc {
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin-bottom: 3rem;
+      line-height: 1.7;
+    }
+
+    .alt {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Screenshot */
+    .screenshot {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Cards */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .card-grid.two {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      transition: border-color 0.2s, transform 0.2s;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.25rem;
+      font-size: 1.1rem;
+    }
+
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.65rem;
+      letter-spacing: -0.01em;
+    }
+
+    .card p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+
+    .card ul {
+      list-style: none;
+      margin-top: 0.75rem;
+    }
+
+    .card li {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      padding: 0.3rem 0;
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .card li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.95em;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--accent-light);
+    }
+
+    .card .filename {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin: 0.75rem 0 1.25rem;
+      word-break: break-all;
+    }
+
+    .card .btn {
+      margin-top: auto;
+      align-self: flex-start;
+    }
+
+    .extra-downloads {
+      margin-top: 2rem;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .extra-downloads ul {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .extra-downloads a {
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .extra-downloads a:hover {
+      color: #a78bfa;
+    }
+
+    /* Steps */
+    .steps {
+      list-style: none;
+      counter-reset: step;
+      max-width: 720px;
+    }
+
+    .steps li {
+      counter-increment: step;
+      position: relative;
+      padding-left: 3rem;
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary);
+    }
+
+    .steps li::before {
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      color: var(--accent-light);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .steps strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Footer */
+    footer {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--accent-light);
+    }
+
+    footer p + p {
+      margin-top: 0.5rem;
+    }
+
+    /* Tablet */
+    @media (max-width: 1024px) {
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Phone */
+    @media (max-width: 767px) {
+      nav {
+        padding: 0.75rem 1.25rem;
+      }
+
+      nav ul {
+        gap: 1.25rem;
+      }
+
+      nav a {
+        font-size: 0.8rem;
+      }
+
+      nav .logo-mark span {
+        display: none;
+      }
+
+      nav .logo-mark svg {
+        height: 44px;
+        width: 44px;
+      }
+
+      .hero {
+        min-height: auto;
+        padding: 7rem 1.5rem 3.5rem;
+      }
+
+      .hero::before {
+        width: 360px;
+        height: 360px;
+      }
+
+      .hero-logo {
+        width: 180px;
+      }
+
+      .hero p {
+        font-size: 1rem;
+      }
+
+      section {
+        padding: 3.5rem 1.25rem;
+      }
+
+      .card-grid,
+      .card-grid.two {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Small phone */
+    @media (max-width: 479px) {
+      nav {
+        padding: 0.65rem 1rem;
+      }
+
+      nav ul {
+        gap: 0.875rem;
+      }
+
+      nav .logo-mark svg {
+        height: 38px;
+        width: 38px;
+      }
+
+      .hero {
+        padding: 6rem 1rem 3rem;
+      }
+
+      section {
+        padding: 3rem 1rem;
+      }
+
+      .card {
+        padding: 1.5rem;
+      }
+
+      footer {
+        padding: 1.5rem 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="logo-symbol" viewBox="0 0 256 256">
+      <path fill="#000000" fill-rule="evenodd" d="M 74 24 L 69 29 L 65 36 L 65 39 L 64 40 L 65 49 L 67 52 L 67 54 L 69 56 L 72 62 L 76 66 L 76 67 L 91 82 L 93 83 L 93 84 L 81 92 L 70 103 L 65 113 L 65 124 L 70 134 L 70 136 L 72 139 L 72 142 L 73 143 L 73 145 L 70 152 L 66 156 L 66 162 L 67 164 L 103 164 L 108 155 L 109 147 L 108 146 L 108 143 L 106 138 L 101 131 L 89 118 L 85 110 L 85 104 L 88 98 L 93 93 L 98 90 L 100 90 L 134 125 L 134 126 L 140 132 L 140 133 L 153 148 L 165 165 L 168 164 L 173 159 L 176 154 L 176 152 L 177 151 L 177 139 L 172 130 L 157 113 L 153 107 L 152 102 L 151 101 L 151 89 L 152 88 L 152 84 L 153 83 L 154 77 L 156 73 L 162 67 L 168 67 L 169 68 L 171 68 L 173 70 L 175 69 L 175 65 L 176 64 L 176 43 L 174 39 L 168 35 L 159 34 L 158 32 L 157 33 L 148 32 L 144 30 L 141 27 L 141 23 L 139 23 L 134 29 L 131 36 L 131 42 L 130 43 L 131 54 L 133 58 L 137 62 L 141 64 L 144 64 L 145 66 L 146 65 L 150 65 L 151 66 L 151 68 L 147 72 L 143 78 L 143 80 L 141 83 L 141 86 L 140 87 L 140 92 L 139 93 L 137 93 L 100 54 L 100 53 L 95 48 L 95 47 L 85 35 L 79 26 L 78 23 Z"/>
+      <text x="186" y="176" font-family="'EB Garamond', Georgia, serif" font-size="18" fill="#000000">0</text>
+      <text x="128" y="236" text-anchor="middle" font-family="'EB Garamond', Georgia, serif" font-size="20" fill="#000000">Aleph Void</text>
+    </symbol>
+  </svg>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="https://alephvoid.com" class="logo-mark">
+        <svg aria-label="Aleph Void"><use href="#logo-symbol"/></svg>
+        <span>Aleph Void</span>
+      </a>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="#usage">Usage</a></li>
+        <li><a href="https://github.com/aleph-void/JeskolaBuzzVST" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-content">
+      <img src="/assets/buzz-logo.gif" alt="Jeskola Buzz" class="hero-logo" width="300" height="153">
+      <h1>Buzz Machines,<br><span class="accent">in Any VST3 DAW</span></h1>
+      <p>BuzzBridge loads classic Jeskola Buzz generator and effect DLLs and runs them as automatable VST3 instruments and effects &mdash; on Windows natively, and on Linux through WINE and yabridge.</p>
+      <div class="hero-actions">
+        <a href="#download" class="btn">Download &darr;</a>
+        <a href="https://github.com/aleph-void/JeskolaBuzzVST" class="btn secondary" target="_blank" rel="noopener noreferrer">View Source</a>
+      </div>
+      <p class="version-note" data-release-label>Latest release on GitHub</p>
+    </div>
+  </section>
+
+  <section class="alt">
+    <div class="section-inner">
+      <img src="/assets/screenshot.png" alt="Buzz Effect Bridge and Buzz Generator Bridge editors open in VCV Rack" class="screenshot" loading="lazy" width="1600" height="955">
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="section-inner">
+      <p class="section-label">// Features</p>
+      <h2 class="section-title">One Bundle, Two Plugins</h2>
+      <p class="section-desc">BuzzBridge ships as a single VST3 bundle exposing <strong>Buzz Generator Bridge</strong> for instruments and <strong>Buzz Effect Bridge</strong> for effects.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">&#x1f39b;</div>
+          <h3>Automatable Parameters</h3>
+          <p>Every Buzz machine parameter is mapped to a VST3 slider with its real name, range, and default.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">&#x1f3b9;</div>
+          <h3>Full MIDI Support</h3>
+          <p>Notes, velocity, CC (with MIDI Learn), and poly pressure are translated into Buzz's native note and control format.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">&#x1f309;</div>
+          <h3>32 &amp; 64-bit DAWs</h3>
+          <p>64-bit hosts load machines through an out-of-process 32-bit bridge with shared-memory audio. A buggy machine can't take down your DAW.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">&#x1f427;</div>
+          <h3>Linux via yabridge</h3>
+          <p>A cross-compiled build runs in Bitwig, Reaper, Ardour, Renoise and others through WINE and yabridge, with a one-step installer.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">&#x1f4e6;</div>
+          <h3>Machine Database</h3>
+          <p>An optional archive of 726 Buzz machines is published with each release, ready to drop into your Gear folder.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">&#x1f50f;</div>
+          <h3>Signed Windows Builds</h3>
+          <p>Windows binaries and the installer are code-signed, and the installer registers a standard uninstaller.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" class="alt">
+    <div class="section-inner">
+      <p class="section-label">// Download</p>
+      <h2 class="section-title">Get BuzzBridge</h2>
+      <p class="section-desc">Builds are published on <a href="https://github.com/aleph-void/JeskolaBuzzVST/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a>. The buttons below point at the latest release.</p>
+
+      <div class="card-grid two">
+        <div class="card">
+          <div class="card-icon">&#x1fa9f;</div>
+          <h3>Windows</h3>
+          <p>Installer for 32 and 64-bit DAWs. Installs to <code>C:\Program Files\Common Files\VST3\</code>.</p>
+          <p class="filename" data-asset-name="windows">BuzzBridge-Setup-vX.Y.Z.exe</p>
+          <a class="btn" data-asset="windows" href="https://github.com/aleph-void/JeskolaBuzzVST/releases/latest">Download for Windows</a>
+        </div>
+
+        <div class="card">
+          <div class="card-icon">&#x1f427;</div>
+          <h3>Linux</h3>
+          <p>Tarball with an installer that sets up a 32-bit WINE prefix and registers the plugin with yabridge.</p>
+          <p class="filename" data-asset-name="linux">BuzzBridge-Linux-vX.Y.Z.tar.gz</p>
+          <a class="btn" data-asset="linux" href="https://github.com/aleph-void/JeskolaBuzzVST/releases/latest">Download for Linux</a>
+        </div>
+      </div>
+
+      <div class="extra-downloads">
+        <p>Also in each release:</p>
+        <ul>
+          <li><a data-asset="machines" href="https://github.com/aleph-void/JeskolaBuzzVST/releases/latest">Buzz machine database (mdb_machines.zip)</a></li>
+          <li><a data-asset="support-windows" href="https://github.com/aleph-void/JeskolaBuzzVST/releases/latest">Machine support report &mdash; Windows</a></li>
+          <li><a data-asset="support-linux" href="https://github.com/aleph-void/JeskolaBuzzVST/releases/latest">Machine support report &mdash; Linux</a></li>
+          <li><a href="https://github.com/aleph-void/JeskolaBuzzVST/releases" target="_blank" rel="noopener noreferrer">All releases &rarr;</a></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="usage">
+    <div class="section-inner">
+      <p class="section-label">// Getting Started</p>
+      <h2 class="section-title">Install &amp; Play</h2>
+      <p class="section-desc">You'll need some Buzz machine DLLs &mdash; grab the machine database from the release, or point BuzzBridge at your existing Buzz <code>Gear</code> folder.</p>
+
+      <ol class="steps">
+        <li><strong>Install.</strong> On Windows, run the setup <code>.exe</code>. On Linux, extract the tarball and run the bundled installer:
+<pre><code>tar xf BuzzBridge-Linux-vX.Y.Z.tar.gz
+cd BuzzBridge-Linux-vX.Y.Z
+./installer.sh</code></pre>
+          The Linux installer needs <a href="https://github.com/robbert-vdh/yabridge" target="_blank" rel="noopener noreferrer">yabridge</a> and offers to install WINE with 32-bit support.
+        </li>
+        <li><strong>Load a bridge.</strong> Add <em>Buzz Generator Bridge</em> as an instrument or <em>Buzz Effect Bridge</em> as an effect in your DAW.</li>
+        <li><strong>Pick a machine.</strong> Open the plugin editor, choose a gear folder, and load a Buzz machine DLL.</li>
+        <li><strong>Play.</strong> Parameters appear as automatable sliders. For generators, send MIDI notes &mdash; velocity is routed to the machine's volume parameter.</li>
+      </ol>
+
+      <p class="section-desc" style="margin-bottom:0">Building from source, the bridge architecture, and Linux troubleshooting are covered in the <a href="https://github.com/aleph-void/JeskolaBuzzVST#readme" target="_blank" rel="noopener noreferrer">README</a>.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>BuzzBridge is built by <a href="https://alephvoid.com">Aleph Void, LLC</a> &middot; <a href="https://github.com/aleph-void/JeskolaBuzzVST" target="_blank" rel="noopener noreferrer">Source on GitHub</a></p>
+    <p>Jeskola Buzz and the Buzz machine interface are &copy; Oskari Tammelin. VST is a trademark of Steinberg Media Technologies GmbH.</p>
+  </footer>
+
+  <script>
+    // Asset names include the tag (e.g. BuzzBridge-Setup-v1.0.9.exe), so
+    // resolve direct links from the latest release. Links fall back to the
+    // releases/latest page if the API is unreachable or rate-limited.
+    (function () {
+      var matchers = {
+        'windows': /^BuzzBridge-Setup-.*\.exe$/,
+        'linux': /^BuzzBridge-Linux-.*\.tar\.gz$/,
+        'machines': /^mdb_machines\.zip$/,
+        'support-windows': /^machine-support_windows\.txt$/,
+        'support-linux': /^machine-support_linux\.txt$/
+      };
+
+      fetch('https://api.github.com/repos/aleph-void/JeskolaBuzzVST/releases/latest', {
+        headers: { 'Accept': 'application/vnd.github+json' }
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (release) {
+          var assets = release.assets || [];
+          Object.keys(matchers).forEach(function (key) {
+            var asset = assets.find(function (a) { return matchers[key].test(a.name); });
+            if (!asset) return;
+            document.querySelectorAll('[data-asset="' + key + '"]').forEach(function (el) {
+              el.href = asset.browser_download_url;
+            });
+            document.querySelectorAll('[data-asset-name="' + key + '"]').forEach(function (el) {
+              el.textContent = asset.name + ' \u00b7 ' + (asset.size / 1048576).toFixed(1) + ' MB';
+            });
+          });
+          var label = document.querySelector('[data-release-label]');
+          if (label && release.tag_name) {
+            var date = release.published_at ? ' \u00b7 ' + release.published_at.slice(0, 10) : '';
+            label.innerHTML = '';
+            var link = document.createElement('a');
+            link.href = release.html_url;
+            link.textContent = 'Latest: ' + release.tag_name + date;
+            link.style.color = 'inherit';
+            label.appendChild(link);
+          }
+        })
+        .catch(function () { /* keep releases/latest fallback links */ });
+    })();
+  </script>
+
+</body>
+</html>
