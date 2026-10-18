@@ -47,7 +47,7 @@ chmod +x "${STAGING}/installer.sh" "${STAGING}/uninstall.sh"
 # an empty URL so installer.sh shows a helpful manual-download message.
 MDB_URL=""
 if [[ "${VERSION}" =~ ^v[0-9] ]]; then
-    MDB_URL="https://github.com/nstarke/JeskolaBuzzVST/releases/download/${VERSION}/mdb_machines.zip"
+    MDB_URL="https://github.com/${GITHUB_REPOSITORY:-aleph-void/JeskolaBuzzVST}/releases/download/${VERSION}/mdb_machines.zip"
 fi
 # Substitute ONLY the assignment line (anchored on `MDB_URL="@MDB_URL@"`), not
 # every occurrence. installer.sh also references the @MDB_URL@ token inside its
@@ -79,7 +79,7 @@ Install:
 Uninstall:
   ./uninstall.sh
 
-See the project README at https://github.com/nstarke/JeskolaBuzzVST for
+See the project README at https://github.com/aleph-void/JeskolaBuzzVST for
 more details on pointing BuzzBridge at your Jeskola Buzz machine directory
 via the BUZZVST_GEAR_DIR environment variable.
 EOF
