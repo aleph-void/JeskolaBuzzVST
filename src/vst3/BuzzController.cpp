@@ -510,15 +510,6 @@ void BuzzController::onDllPathSelected(const std::string& path)
 	// Always send to processor
 	sendDllPathToProcessor(path);
 
-	// Start a timer to poll for load completion (processor can't sendMessage back
-	// from the audio thread without deadlocking). Timer fires on UI thread.
-	if (activeView) {
-		HWND hwnd = activeView->getContainerHWND();
-		if (hwnd && IsWindow(hwnd)) {
-			SetTimer(hwnd, 42 /*timer ID*/, 200 /*ms*/, nullptr);
-		}
-	}
-
 	if (paramsLoaded && componentHandler) {
 		componentHandler->restartComponent(kParamTitlesChanged | kParamValuesChanged | kMidiCCAssignmentChanged);
 	}
@@ -916,15 +907,15 @@ tresult PLUGIN_API BuzzController::notify(IMessage* message)
 	// Handle machine load failure from processor
 	if (strcmp(message->getMessageID(), "BuzzMachineLoadFailed") == 0) {
 		OutputDebugStringA("[BuzzBridge] Controller: received load failure from processor\n");
+		currentDllPath.clear(); // Allow retrying the same DLL after a failed load.
+		currentMachineName = "Load failed";
+		const void* reasonData = nullptr;
+		Steinberg::uint32 reasonSize = 0;
+		if (message->getAttributes()->getBinary("Reason", reasonData, reasonSize) == kResultOk && reasonSize > 0)
+			currentMachineName.assign((const char*)reasonData, reasonSize);
 		if (activeView) {
-			// Try to get a reason string
-			std::string reason = "Load failed";
-			const void* reasonData = nullptr;
-			Steinberg::uint32 reasonSize = 0;
-			if (message->getAttributes()->getBinary("Reason", reasonData, reasonSize) == kResultOk && reasonSize > 0) {
-				reason = std::string((const char*)reasonData, reasonSize);
-			}
-			activeView->setMachineName(reason);
+			activeView->setDllPath(currentDllPath);
+			activeView->setMachineName(currentMachineName);
 		}
 		return kResultOk;
 	}
@@ -1450,16 +1441,6 @@ void BuzzController::wireParamCallbacks(BuzzPluginView* view)
 			componentHandler->restartComponent(kParamTitlesChanged | kParamValuesChanged | kMidiCCAssignmentChanged);
 		}
 		pendingParamRestart = false;
-	};
-	view->onPollMachineLoad = [this]() -> bool {
-		// Ask processor if it has a pending machine loaded
-		if (auto msg = owned(allocateMessage())) {
-			msg->setMessageID("BuzzPollMachineStatus");
-			sendMessage(msg);
-		}
-		// The processor will reply with BuzzMachineLoaded if ready
-		// Return true to stop timer if we got an update
-		return !pendingParamRestart;
 	};
 }
 

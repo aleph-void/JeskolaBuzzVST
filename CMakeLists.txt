@@ -157,6 +157,34 @@ endif()
 # =============================================================================
 # Test Suite (only in 32-bit builds where we can load Buzz DLLs directly)
 # =============================================================================
+# Processor/controller regressions run in both architectures, including the
+# 64-bit message path which the direct-loader unit suite cannot exercise.
+enable_testing()
+add_executable(BuzzProcessorTests
+    tests/main.cpp
+    tests/test_ProcessorRegression.cpp
+    ${BUZZ_SOURCES}
+    ${BRIDGE_SOURCES}
+    src/vst3/BuzzProcessor.cpp
+    src/vst3/BuzzController.cpp
+    src/vst3/BuzzPluginView.cpp
+    src/vst3/GearScanner.cpp
+    src/vst3/ParameterMapping.cpp
+)
+target_include_directories(BuzzProcessorTests PRIVATE src tests)
+target_compile_features(BuzzProcessorTests PRIVATE cxx_std_17)
+target_link_libraries(BuzzProcessorTests PRIVATE sdk sdk_hosting
+    kernel32 comdlg32 user32 gdi32 shell32 ole32 comctl32)
+if(MSVC)
+    target_compile_options(BuzzProcessorTests PRIVATE /EHa)
+    target_compile_definitions(BuzzProcessorTests PRIVATE _CRT_SECURE_NO_WARNINGS NOMINMAX)
+endif()
+if(BUZZVST_64BIT)
+    target_compile_definitions(BuzzProcessorTests PRIVATE BUZZVST_64BIT=1)
+endif()
+set_target_properties(BuzzProcessorTests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+add_test(NAME BuzzProcessorTests COMMAND BuzzProcessorTests)
+
 if(NOT BUZZVST_64BIT)
     enable_testing()
 
