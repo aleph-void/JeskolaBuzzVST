@@ -2,6 +2,8 @@
 
 # BuzzBridge VST3
 
+[![Sponsor Aleph Void](https://img.shields.io/badge/Sponsor-Aleph%20Void-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/aleph-void)
+
 [![CI](https://github.com/aleph-void/JeskolaBuzzVST/actions/workflows/ci.yml/badge.svg)](https://github.com/aleph-void/JeskolaBuzzVST/actions/workflows/ci.yml)
 
 ![images/image.png](images/image.png)
